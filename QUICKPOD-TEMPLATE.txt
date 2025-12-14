@@ -1,0 +1,115 @@
+# WineReaper QuickPod.io Template
+# Copy and paste these values into QuickPod.io template creation form
+
+## Basic Information
+Template Name: WineReaper - Professional DAW with GPU Acceleration
+Docker Image: schnicklbob/winereaper:latest
+Disk Space: 100GB (recommended for plugins and projects)
+Description: Windows Reaper DAW running in Wine with GPU acceleration, VNC/web GUI, and full VST plugin support. Professional music production, mixing, and mastering environment.
+
+## Advanced Configuration
+
+### Docker Options (copy everything below this line):
+```
+--gpus all \
+-p 6080:6080 \
+-p 5900:5900 \
+-p 22:22 \
+-p 8080:8080 \
+-e SSH_USERNAME=reaper \
+-e SSH_PASSWORD=changeme123 \
+-e VNC_PASSWORD=changeme123 \
+-e PUID=1000 \
+-e PGID=1000 \
+-e TZ=Etc/UTC \
+-e RESOLUTION=1920x1080x24 \
+-e DISPLAY=:1 \
+-e NVIDIA_VISIBLE_DEVICES=all \
+-e NVIDIA_DRIVER_CAPABILITIES=all \
+-v /workspace:/home/reaper/projects \
+-v /plugins/vst2:/home/reaper/.wine/drive_c/Program\ Files/Common\ Files/VST2 \
+-v /plugins/vst3:/home/reaper/.wine/drive_c/Program\ Files/Common\ Files/VST3 \
+-v /config:/home/reaper/.config \
+--shm-size=2gb \
+--device /dev/snd \
+--group-add audio
+```
+
+### Launch Mode:
+SSH Entry (recommended for setup) OR Docker Entrypoint
+
+### Docker Entrypoint Run Options (if using Docker Entrypoint):
+```
+# Start Reaper with VNC/web interface
+/startup.sh
+```
+
+### On Start Scripts:
+```
+#!/bin/bash
+echo "Setting up WineReaper environment..."
+
+# Create necessary directories
+mkdir -p /home/reaper/projects \
+         /home/reaper/.wine/drive_c/Program\ Files/Common\ Files/VST2 \
+         /home/reaper/.wine/drive_c/Program\ Files/Common\ Files/VST3 \
+         /home/reaper/.config/REAPER
+
+# Set up audio permissions
+usermod -a -G audio reaper
+
+# Initialize Wine prefix (first time only)
+if [ ! -f /home/reaper/.wine/.initialized ]; then
+    echo "Initializing Wine prefix..."
+    wine wineboot --init
+    winetricks -q corefonts vcrun2019 dotnet48
+    touch /home/reaper/.wine/.initialized
+fi
+
+echo "WineReaper ready! Access via:"
+echo "- Web GUI: http://[your-instance]:6080/vnc.html"
+echo "- VNC Client: [your-instance]:5900 (password: changeme123)"
+echo "- SSH: ssh reaper@[your-instance] (password: changeme123)"
+```
+
+## Usage Instructions
+
+### After deployment:
+1. **Web Access**: http://[your-instance]:6080/vnc.html
+   - Password: `changeme123`
+2. **VNC Client**: Connect to [your-instance]:5900
+   - Password: `changeme123`
+3. **SSH Access**: `ssh reaper@[your-instance]`
+   - Password: `changeme123`
+
+### Volume Mounts:
+- `/home/reaper/projects`: Reaper project files and audio
+- `/plugins/vst2`: VST2 plugins (persistent)
+- `/plugins/vst3`: VST3 plugins (persistent)
+- `/config`: Reaper configuration and preferences
+
+### Included Software:
+- Reaper DAW (Windows version in Wine)
+- Pre-installed free VSTs (TAL, Dexed, Surge XT, Vital)
+- GPU-accelerated plugin support
+- VNC/noVNC web interface
+- Full audio/MIDI support
+
+## Notes
+- **GPU Required**: For plugin acceleration and real-time processing
+- **Audio Setup**: May need host audio device passthrough (`--device /dev/snd`)
+- **First Run**: Wine initialization may take 5-10 minutes
+- **Plugin Installation**: Copy VST files to mounted plugin directories
+- **Performance**: Use `--shm-size=2gb` for better plugin performance
+- **Storage**: 100GB recommended for sample libraries and projects
+
+### Recommended QuickPod.io Settings:
+- **GPU**: Required (NVIDIA with CUDA)
+- **CPU**: 4+ cores recommended
+- **RAM**: 8GB+ recommended
+- **Network**: Enable for plugin licensing/updates
+
+### Security Notes:
+- Change default passwords before production use
+- Consider firewall rules for VNC/SSH ports
+- Use VPN for remote access to VNC
